@@ -1,0 +1,18 @@
+[package]
+name = "testlist"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+ratatui = "0.29"
+crossterm = "0.28"
+ron = "0.8"
+serde = { version = "1.0", features = ["derive"] }
+thiserror = "2.0"
+clap = { version = "4.5", features = ["derive"] }
+chrono = { version = "0.4", features = ["serde"] }
+portable-pty = "0.8"
+vt100 = "0.15"
+
+[dev-dependencies]
+tempfile = "3.14"
