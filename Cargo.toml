@@ -2,6 +2,9 @@
 name = "testlist"
 version = "0.1.0"
 edition = "2021"
+description = "A TUI tool for structured human feedback collection"
+license = "MIT"
+readme = "README.md"
 
 [dependencies]
 ratatui = "0.29"

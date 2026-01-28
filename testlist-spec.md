@@ -330,19 +330,19 @@ EXAMPLES:
 
 ### Phase 1: Core Functionality
 
-- [ ] RON schema definition and serde parsing
-- [ ] Basic TUI layout with ratatui (tests + notes + terminal panes)
-- [ ] Test list display with expand/collapse
-- [ ] Sub-checklist toggling (optional - can skip)
-- [ ] Status marking (pass/fail/inconclusive/skipped)
-- [ ] Notes text entry (optional)
-- [ ] Screenshot path entry (optional)
-- [ ] Results file writing (status always saved, rest if provided)
-- [ ] CLI argument parsing
+- [x] RON schema definition and serde parsing
+- [x] Basic TUI layout with ratatui (tests + notes + terminal panes)
+- [x] Test list display with expand/collapse
+- [x] Sub-checklist toggling (optional - can skip)
+- [x] Status marking (pass/fail/inconclusive/skipped)
+- [x] Notes text entry (optional)
+- [x] Screenshot path entry (optional)
+- [x] Results file writing (status always saved, rest if provided)
+- [x] CLI argument parsing
 
 ### Phase 2: Terminal Integration
 
-- [ ] Embedded PTY in terminal pane (bottom, full width)
+- [x] Embedded PTY in terminal pane (bottom, full width)
 - [ ] Command history with up/down arrows
 - [ ] Tab completion for suggested commands
 - [ ] Copy/paste support
@@ -350,11 +350,11 @@ EXAMPLES:
 ### Phase 3: Polish
 
 - [ ] Markdown syntax highlighting in descriptions
-- [ ] Progress indicator (3/10 complete)
-- [ ] Quit confirmation with unsaved changes
+- [x] Progress indicator (3/10 complete)
+- [x] Quit confirmation with unsaved changes
 - [ ] Auto-save on test completion
-- [ ] Configurable colors/theme
-- [ ] Resize handling
+- [x] Configurable colors/theme
+- [x] Resize handling
 
 ### Phase 4: Enhanced Screenshots
 
@@ -364,7 +364,7 @@ EXAMPLES:
 
 ### Phase 5: Multi-User Support
 
-- [ ] `--tester` flag for identifying user
+- [x] `--tester` flag for identifying user
 - [ ] Results file naming convention
 - [ ] `testlist aggregate <dir>` command to summarize multiple results
 - [ ] Conflict-free design for git/jj workflows
