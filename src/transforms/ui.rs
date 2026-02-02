@@ -117,7 +117,6 @@ mod tests {
     use super::*;
     use crate::data::definition::{ChecklistItem, Meta, Test, Testlist};
     use crate::data::results::{Status, TestlistResults};
-    use crate::data::state::SubSelection;
     use crate::transforms::tests::set_status;
 
     fn make_state() -> AppState {
@@ -161,7 +160,7 @@ mod tests {
     fn test_bug1_notes_edit_then_status_key() {
         let mut state = make_state();
         assert_eq!(state.focused_pane, FocusedPane::Tests);
-        assert_eq!(state.sub_selection, SubSelection::Header);
+        assert_eq!(state.focused_pane, FocusedPane::Tests);
 
         // User presses 'n' to edit notes
         enter_notes_edit(&mut state);
@@ -181,7 +180,7 @@ mod tests {
         );
 
         // Now user presses 'p' — this should work because focus is Tests + Header
-        assert_eq!(state.sub_selection, SubSelection::Header);
+        assert_eq!(state.focused_pane, FocusedPane::Tests);
         set_status(&mut state, Status::Passed);
         assert_eq!(
             state.results.results[0].status,

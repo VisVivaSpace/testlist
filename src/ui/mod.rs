@@ -14,7 +14,7 @@ use ratatui::{
     Frame, Terminal,
 };
 
-use crate::data::state::{AppState, FocusedPane, SubSelection};
+use crate::data::state::{AppState, FocusedPane};
 use crate::error::Result;
 use crate::queries::tests::{current_test, map_y_to_test_index};
 use crate::transforms::{navigation, tests as test_transforms, ui as ui_transforms};
@@ -100,7 +100,13 @@ fn handle_mouse(state: &mut AppState, mouse: crossterm::event::MouseEvent, areas
         let absolute_y = relative_y + state.tests_scroll_offset;
 
         if let Some(test_idx) = map_y_to_test_index(state, absolute_y) {
-            state.selected_test = test_idx;
+            if test_idx == state.selected_test {
+                // Click on already-selected test: toggle expand/collapse
+                ui_transforms::toggle_expand(state);
+            } else {
+                // Click on different test: select it
+                state.selected_test = test_idx;
+            }
         }
     } else if areas.notes_pane.contains((x, y).into()) {
         state.focused_pane = FocusedPane::Notes;
@@ -168,15 +174,8 @@ fn handle_key(
             }
         }
         KeyCode::Enter | KeyCode::Char('l') => {
-            if state.focused_pane == FocusedPane::Tests
-                && state.sub_selection == SubSelection::Header
-            {
-                ui_transforms::toggle_expand(state);
-            }
-        }
-        KeyCode::Char(' ') => {
             if state.focused_pane == FocusedPane::Tests {
-                test_transforms::toggle_checklist(state);
+                ui_transforms::toggle_expand(state);
             }
         }
         KeyCode::Char('n') => {
@@ -190,30 +189,22 @@ fn handle_key(
             }
         }
         KeyCode::Char('p') => {
-            if state.focused_pane == FocusedPane::Tests
-                && state.sub_selection == SubSelection::Header
-            {
+            if state.focused_pane == FocusedPane::Tests {
                 test_transforms::set_status(state, crate::data::results::Status::Passed);
             }
         }
         KeyCode::Char('f') => {
-            if state.focused_pane == FocusedPane::Tests
-                && state.sub_selection == SubSelection::Header
-            {
+            if state.focused_pane == FocusedPane::Tests {
                 test_transforms::set_status(state, crate::data::results::Status::Failed);
             }
         }
         KeyCode::Char('i') => {
-            if state.focused_pane == FocusedPane::Tests
-                && state.sub_selection == SubSelection::Header
-            {
+            if state.focused_pane == FocusedPane::Tests {
                 test_transforms::set_status(state, crate::data::results::Status::Inconclusive);
             }
         }
         KeyCode::Char('s') => {
-            if state.focused_pane == FocusedPane::Tests
-                && state.sub_selection == SubSelection::Header
-            {
+            if state.focused_pane == FocusedPane::Tests {
                 test_transforms::set_status(state, crate::data::results::Status::Skipped);
             }
         }
@@ -356,11 +347,7 @@ fn draw_status_bar(frame: &mut Frame, state: &AppState, area: Rect) {
     } else if state.adding_screenshot {
         " ADDING SCREENSHOT │ [Enter] Confirm │ [Esc] Cancel │ Type path ".to_string()
     } else {
-        let actions = match state.sub_selection {
-            SubSelection::Header => "[P]ass [F]ail [I]nconclusive [S]kip │ [Enter] Expand",
-            SubSelection::Setup(_) | SubSelection::Verify(_) => "[Space] Toggle",
-            SubSelection::Action => "Action (read-only)",
-        };
+        let actions = "[P]ass [F]ail [I]nconclusive [S]kip │ [Enter] Expand";
         let cmd_hint = if current_test(state)
             .and_then(|t| t.suggested_command.as_ref())
             .is_some()
@@ -487,15 +474,14 @@ mod tests {
     #[test]
     fn test_status_key_works_after_notes_editing() {
         use crate::data::results::Status;
-        use crate::data::state::{FocusedPane, SubSelection};
+        use crate::data::state::FocusedPane;
 
         let mut state = make_test_state();
         let mut pty: Option<EmbeddedTerminal> = None;
         let no_mods = KeyModifiers::empty();
 
-        // Initial state: Tests focused, Header selected
+        // Initial state: Tests focused
         assert_eq!(state.focused_pane, FocusedPane::Tests);
-        assert_eq!(state.sub_selection, SubSelection::Header);
 
         // Step 1: Press 'p' — should set status to Passed
         handle_key(&mut state, KeyCode::Char('p'), no_mods, &mut pty);
@@ -526,11 +512,6 @@ mod tests {
             FocusedPane::Tests,
             "Focus should return to Tests after Esc"
         );
-        assert_eq!(
-            state.sub_selection,
-            SubSelection::Header,
-            "Sub-selection should still be Header"
-        );
 
         // Verify notes were saved
         assert_eq!(
@@ -559,7 +540,6 @@ mod tests {
     #[test]
     fn test_status_key_works_after_notes_then_navigate() {
         use crate::data::results::Status;
-        use crate::data::state::SubSelection;
 
         let mut state = make_test_state();
         let mut pty: Option<EmbeddedTerminal> = None;
@@ -574,9 +554,8 @@ mod tests {
         handle_key(&mut state, KeyCode::Char('j'), no_mods, &mut pty);
         handle_key(&mut state, KeyCode::Char('k'), no_mods, &mut pty);
 
-        // Wait — there's only 1 test, so j does nothing (at boundary)
+        // There's only 1 test, so j does nothing (at boundary)
         assert_eq!(state.selected_test, 0);
-        assert_eq!(state.sub_selection, SubSelection::Header);
 
         // Try status key
         handle_key(&mut state, KeyCode::Char('p'), no_mods, &mut pty);

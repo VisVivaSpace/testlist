@@ -27,19 +27,6 @@ impl FocusedPane {
     }
 }
 
-/// What is selected within an expanded test.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum SubSelection {
-    /// The test header row itself
-    Header,
-    /// A setup checklist item (index)
-    Setup(usize),
-    /// The action line
-    Action,
-    /// A verify checklist item (index)
-    Verify(usize),
-}
-
 /// Theme for the TUI.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum Theme {
@@ -99,7 +86,6 @@ pub struct AppState {
     pub testlist_path: PathBuf,
     pub results_path: PathBuf,
     pub selected_test: usize,
-    pub sub_selection: SubSelection,
     pub focused_pane: FocusedPane,
     pub expanded_tests: HashSet<String>,
     pub should_quit: bool,
@@ -135,7 +121,6 @@ impl AppState {
             testlist_path,
             results_path,
             selected_test: 0,
-            sub_selection: SubSelection::Header,
             focused_pane: FocusedPane::Tests,
             expanded_tests: HashSet::new(),
             should_quit: false,
@@ -187,13 +172,4 @@ mod tests {
         assert_eq!(FocusedPane::default(), FocusedPane::Tests);
     }
 
-    #[test]
-    fn test_sub_selection_equality() {
-        assert_eq!(SubSelection::Header, SubSelection::Header);
-        assert_eq!(SubSelection::Setup(0), SubSelection::Setup(0));
-        assert_ne!(SubSelection::Setup(0), SubSelection::Setup(1));
-        assert_eq!(SubSelection::Action, SubSelection::Action);
-        assert_eq!(SubSelection::Verify(2), SubSelection::Verify(2));
-        assert_ne!(SubSelection::Setup(0), SubSelection::Verify(0));
-    }
 }

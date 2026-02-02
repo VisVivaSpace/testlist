@@ -8,9 +8,7 @@ use ratatui::{
     Frame,
 };
 
-use crate::data::results::ChecklistSection;
-use crate::data::state::{AppState, FocusedPane, SubSelection};
-use crate::queries::checklist::is_checked;
+use crate::data::state::{AppState, FocusedPane};
 use crate::queries::tests::{completed_count, result_for_test};
 
 /// Draw the tests pane.
@@ -46,7 +44,7 @@ pub fn draw(frame: &mut Frame, state: &AppState, area: Rect) {
         let prefix = if is_expanded { "▼" } else { "▶" };
         let line = format!("{} {} {}", prefix, status_icon, test.title);
 
-        let header_style = if is_selected_test && state.sub_selection == SubSelection::Header {
+        let header_style = if is_selected_test {
             selected_style
         } else {
             Style::default()
@@ -58,50 +56,22 @@ pub fn draw(frame: &mut Frame, state: &AppState, area: Rect) {
             // Setup steps
             if !test.setup.is_empty() {
                 items.push(ListItem::new(Line::from("   Setup:")));
-                for (j, item) in test.setup.iter().enumerate() {
-                    let checked =
-                        is_checked(&state.results, &test.id, ChecklistSection::Setup, &item.id);
-                    let check = if checked { "[✓]" } else { "[ ]" };
-                    let item_line = format!("     {} {}", check, item.text);
-
-                    let style = if is_selected_test && state.sub_selection == SubSelection::Setup(j)
-                    {
-                        selected_style
-                    } else {
-                        Style::default()
-                    };
-                    items.push(ListItem::new(Line::from(Span::styled(item_line, style))));
+                for item in &test.setup {
+                    let item_line = format!("   • {}", item.text);
+                    items.push(ListItem::new(Line::from(item_line)));
                 }
             }
 
             // Action
             let action_line = format!("   Action: {}", test.action);
-            let action_style = if is_selected_test && state.sub_selection == SubSelection::Action {
-                selected_style
-            } else {
-                Style::default()
-            };
-            items.push(ListItem::new(Line::from(Span::styled(
-                action_line,
-                action_style,
-            ))));
+            items.push(ListItem::new(Line::from(action_line)));
 
             // Verify steps
             if !test.verify.is_empty() {
                 items.push(ListItem::new(Line::from("   Verify:")));
-                for (j, item) in test.verify.iter().enumerate() {
-                    let checked =
-                        is_checked(&state.results, &test.id, ChecklistSection::Verify, &item.id);
-                    let check = if checked { "[✓]" } else { "[ ]" };
-                    let item_line = format!("     {} {}", check, item.text);
-
-                    let style =
-                        if is_selected_test && state.sub_selection == SubSelection::Verify(j) {
-                            selected_style
-                        } else {
-                            Style::default()
-                        };
-                    items.push(ListItem::new(Line::from(Span::styled(item_line, style))));
+                for item in &test.verify {
+                    let item_line = format!("   • {}", item.text);
+                    items.push(ListItem::new(Line::from(item_line)));
                 }
             }
         }

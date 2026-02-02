@@ -1,7 +1,7 @@
-//! Transforms for test status and checklist toggling.
+//! Transforms for test status.
 
-use crate::data::results::{checklist_key, ChecklistSection, Status};
-use crate::data::state::{AppState, SubSelection};
+use crate::data::results::Status;
+use crate::data::state::AppState;
 use crate::queries::tests::current_test;
 
 /// Set the status of the currently selected test.
@@ -13,37 +13,6 @@ pub fn set_status(state: &mut AppState, status: Status) {
     if let Some(result) = state.results.get_result_mut(&test_id) {
         result.status = status;
         result.completed_at = Some(chrono::Utc::now().to_rfc3339());
-        state.dirty = true;
-    }
-}
-
-/// Toggle a checklist item (setup or verify) for the currently selected test.
-pub fn toggle_checklist(state: &mut AppState) {
-    let test = match current_test(state) {
-        Some(t) => t,
-        None => return,
-    };
-
-    let key = match state.sub_selection {
-        SubSelection::Setup(i) => test
-            .setup
-            .get(i)
-            .map(|item| checklist_key(&test.id, ChecklistSection::Setup, &item.id)),
-        SubSelection::Verify(i) => test
-            .verify
-            .get(i)
-            .map(|item| checklist_key(&test.id, ChecklistSection::Verify, &item.id)),
-        _ => None,
-    };
-
-    if let Some(key) = key {
-        let current = state
-            .results
-            .checklist_results
-            .get(&key)
-            .copied()
-            .unwrap_or(false);
-        state.results.checklist_results.insert(key, !current);
         state.dirty = true;
     }
 }
@@ -94,48 +63,5 @@ mod tests_mod {
         assert_eq!(state.results.results[0].status, Status::Passed);
         assert!(state.results.results[0].completed_at.is_some());
         assert!(state.dirty);
-    }
-
-    #[test]
-    fn test_toggle_checklist_setup() {
-        let mut state = make_state();
-        state.sub_selection = SubSelection::Setup(0);
-        // Expand the test so sub_selection is valid
-        state.expanded_tests.insert("t1".to_string());
-
-        toggle_checklist(&mut state);
-        assert_eq!(
-            state.results.checklist_results.get("t1:setup:s0"),
-            Some(&true)
-        );
-        assert!(state.dirty);
-
-        // Toggle again
-        state.dirty = false;
-        toggle_checklist(&mut state);
-        assert_eq!(
-            state.results.checklist_results.get("t1:setup:s0"),
-            Some(&false)
-        );
-        assert!(state.dirty);
-    }
-
-    #[test]
-    fn test_toggle_checklist_verify() {
-        let mut state = make_state();
-        state.sub_selection = SubSelection::Verify(0);
-        toggle_checklist(&mut state);
-        assert_eq!(
-            state.results.checklist_results.get("t1:verify:v0"),
-            Some(&true)
-        );
-    }
-
-    #[test]
-    fn test_toggle_checklist_header_noop() {
-        let mut state = make_state();
-        state.sub_selection = SubSelection::Header;
-        toggle_checklist(&mut state);
-        assert!(!state.dirty);
     }
 }

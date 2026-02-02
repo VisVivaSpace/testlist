@@ -2,7 +2,7 @@
 
 use crate::data::definition::Test;
 use crate::data::results::{Status, TestResult, TestlistResults};
-use crate::data::state::{AppState, SubSelection};
+use crate::data::state::AppState;
 
 /// Get the currently selected test definition.
 pub fn current_test(state: &AppState) -> Option<&Test> {
@@ -29,40 +29,23 @@ pub fn completed_count(state: &AppState) -> usize {
         .count()
 }
 
-/// Calculate the line number of the current selection in the tests pane.
+/// Calculate the line number of the current selection (header) in the tests pane.
 pub fn selected_line_number(state: &AppState) -> usize {
     let mut line = 0;
 
     for (i, test) in state.testlist.tests.iter().enumerate() {
-        if i == state.selected_test && state.sub_selection == SubSelection::Header {
+        if i == state.selected_test {
             return line;
         }
         line += 1;
 
         if state.expanded_tests.contains(&test.id) {
             if !test.setup.is_empty() {
-                line += 1; // "Setup:" header
-                for j in 0..test.setup.len() {
-                    if i == state.selected_test && state.sub_selection == SubSelection::Setup(j) {
-                        return line;
-                    }
-                    line += 1;
-                }
+                line += 1 + test.setup.len(); // "Setup:" + items
             }
-
-            if i == state.selected_test && state.sub_selection == SubSelection::Action {
-                return line;
-            }
-            line += 1;
-
+            line += 1; // Action
             if !test.verify.is_empty() {
-                line += 1; // "Verify:" header
-                for j in 0..test.verify.len() {
-                    if i == state.selected_test && state.sub_selection == SubSelection::Verify(j) {
-                        return line;
-                    }
-                    line += 1;
-                }
+                line += 1 + test.verify.len(); // "Verify:" + items
             }
         }
     }
@@ -71,23 +54,27 @@ pub fn selected_line_number(state: &AppState) -> usize {
 }
 
 /// Map a y-coordinate in the tests pane to a test index.
+/// Clicks on expanded content rows map to the parent test.
 pub fn map_y_to_test_index(state: &AppState, y: usize) -> Option<usize> {
     let mut current_y = 0;
 
     for (i, test) in state.testlist.tests.iter().enumerate() {
-        if current_y == y {
-            return Some(i);
-        }
+        let header_y = current_y;
         current_y += 1;
 
         if state.expanded_tests.contains(&test.id) {
             if !test.setup.is_empty() {
-                current_y += 2 + test.setup.len();
+                current_y += 1 + test.setup.len();
             }
-            current_y += 1;
+            current_y += 1; // Action
             if !test.verify.is_empty() {
-                current_y += 2 + test.verify.len();
+                current_y += 1 + test.verify.len();
             }
+        }
+
+        // y falls within this test's range (header + expanded content)
+        if y >= header_y && y < current_y {
+            return Some(i);
         }
     }
 
@@ -165,5 +152,18 @@ mod tests_mod {
         assert_eq!(completed_count(&state), 0);
         state.results.results[0].status = Status::Passed;
         assert_eq!(completed_count(&state), 1);
+    }
+
+    #[test]
+    fn test_map_y_expanded_content_maps_to_parent() {
+        let mut state = make_state();
+        state.expanded_tests.insert("t1".to_string());
+        // t1 layout: header(0), "Setup:"(1), "Step A"(2), Action(3)
+        // t2 starts at y=4
+        assert_eq!(map_y_to_test_index(&state, 0), Some(0)); // header
+        assert_eq!(map_y_to_test_index(&state, 1), Some(0)); // Setup:
+        assert_eq!(map_y_to_test_index(&state, 2), Some(0)); // Step A
+        assert_eq!(map_y_to_test_index(&state, 3), Some(0)); // Action
+        assert_eq!(map_y_to_test_index(&state, 4), Some(1)); // t2 header
     }
 }
