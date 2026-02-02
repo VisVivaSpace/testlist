@@ -104,6 +104,8 @@ pub struct AppState {
     pub dirty: bool,
     // Show quit confirmation dialog
     pub confirm_quit: bool,
+    // Show help popup
+    pub show_help: bool,
     // UI theme
     pub theme: Theme,
 }
@@ -133,6 +135,7 @@ impl AppState {
             tests_visible_height: 20,
             dirty: false,
             confirm_quit: false,
+            show_help: false,
             theme: Theme::Dark,
         }
     }

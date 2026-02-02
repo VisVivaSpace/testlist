@@ -80,8 +80,8 @@ fn main_loop(
 }
 
 fn handle_mouse(state: &mut AppState, mouse: crossterm::event::MouseEvent, areas: &LayoutAreas) {
-    // Don't change focus via mouse during editing modes
-    if state.editing_notes || state.adding_screenshot || state.confirm_quit {
+    // Don't change focus via mouse during editing modes or modal dialogs
+    if state.editing_notes || state.adding_screenshot || state.confirm_quit || state.show_help {
         return;
     }
 
@@ -133,6 +133,15 @@ fn handle_key(
         return;
     }
 
+    // Handle help popup
+    if state.show_help {
+        match key {
+            KeyCode::Char('?') | KeyCode::Esc => state.show_help = false,
+            _ => {}
+        }
+        return;
+    }
+
     // Handle notes editing mode
     if state.editing_notes {
         handle_notes_editing(state, key);
@@ -173,7 +182,7 @@ fn handle_key(
                 navigation::select_next(state);
             }
         }
-        KeyCode::Enter | KeyCode::Char('l') => {
+        KeyCode::Enter | KeyCode::Char('l') | KeyCode::Char(' ') => {
             if state.focused_pane == FocusedPane::Tests {
                 ui_transforms::toggle_expand(state);
             }
@@ -218,6 +227,13 @@ fn handle_key(
             }
         }
         KeyCode::Char('t') => ui_transforms::toggle_theme(state),
+        KeyCode::Char('?') => state.show_help = true,
+        KeyCode::Char('w') => {
+            if let Ok(()) = crate::actions::files::save_results(&state.results, &state.results_path)
+            {
+                state.dirty = false;
+            }
+        }
         _ => {}
     }
 }
@@ -301,6 +317,10 @@ fn draw(frame: &mut Frame, state: &AppState, pty: &Option<EmbeddedTerminal>) -> 
         draw_quit_dialog(frame, state, size);
     }
 
+    if state.show_help {
+        draw_help_dialog(frame, state, size);
+    }
+
     LayoutAreas {
         tests_pane: top_chunks[0],
         notes_pane: top_chunks[1],
@@ -320,8 +340,7 @@ fn draw_quit_dialog(frame: &mut Frame, state: &AppState, area: Rect) {
 
     let text = vec![
         Line::from(""),
-        Line::from("You have unsaved changes."),
-        Line::from("Quit anyway? (y/n)"),
+        Line::from("Save changes and quit? (y/n)"),
     ];
 
     let dialog = Paragraph::new(text)
@@ -330,6 +349,47 @@ fn draw_quit_dialog(frame: &mut Frame, state: &AppState, area: Rect) {
                 .borders(Borders::ALL)
                 .border_style(Style::default().fg(ratatui::style::Color::Yellow))
                 .title(" Confirm Quit "),
+        )
+        .style(Style::default().bg(theme.bg()).fg(theme.fg()));
+
+    frame.render_widget(dialog, dialog_area);
+}
+
+fn draw_help_dialog(frame: &mut Frame, state: &AppState, area: Rect) {
+    let theme = state.theme;
+    let dialog_width = 54u16;
+    let dialog_height = 18u16;
+    let x = area.width.saturating_sub(dialog_width) / 2;
+    let y = area.height.saturating_sub(dialog_height) / 2;
+    let dialog_area = Rect::new(x, y, dialog_width, dialog_height);
+
+    frame.render_widget(Clear, dialog_area);
+
+    let text = vec![
+        Line::from(""),
+        Line::from(" Navigation"),
+        Line::from("   j/k or ↑/↓   Navigate tests"),
+        Line::from("   Enter/Space   Expand/collapse test"),
+        Line::from("   Tab           Cycle pane focus"),
+        Line::from(""),
+        Line::from(" Test Status"),
+        Line::from("   p  Pass    f  Fail"),
+        Line::from("   i  Inconclusive    s  Skip"),
+        Line::from(""),
+        Line::from(" Actions"),
+        Line::from("   n  Edit notes       a  Add screenshot"),
+        Line::from("   c  Run suggested command"),
+        Line::from(""),
+        Line::from(" Other"),
+        Line::from("   w  Save     t  Theme     ?  Help     q  Quit"),
+    ];
+
+    let dialog = Paragraph::new(text)
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_style(Style::default().fg(theme.accent()))
+                .title(" Help "),
         )
         .style(Style::default().bg(theme.bg()).fg(theme.fg()));
 
@@ -347,18 +407,9 @@ fn draw_status_bar(frame: &mut Frame, state: &AppState, area: Rect) {
     } else if state.adding_screenshot {
         " ADDING SCREENSHOT │ [Enter] Confirm │ [Esc] Cancel │ Type path ".to_string()
     } else {
-        let actions = "[P]ass [F]ail [I]nconclusive [S]kip │ [Enter] Expand";
-        let cmd_hint = if current_test(state)
-            .and_then(|t| t.suggested_command.as_ref())
-            .is_some()
-        {
-            "[c] Run cmd "
-        } else {
-            ""
-        };
         format!(
-            " {} │ [n] Notes [a] Screenshot {}│ [t] Theme │ [Tab] Pane │ [Q]uit │ {} ",
-            actions, cmd_hint, test_name
+            " [P]ass [F]ail [I]nc [S]kip │ [Tab] Pane │ [?] Help │ [w] Save │ [Q]uit │ {} ",
+            test_name
         )
     };
 
