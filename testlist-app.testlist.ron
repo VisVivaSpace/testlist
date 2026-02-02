@@ -1,38 +1,74 @@
 // User test checklist for the testlist TUI application
+// Uses the new ChecklistItem(id, text) format
 Testlist(
     meta: Meta(
-        title: "testlist App User Testing",
-        description: "Comprehensive user testing checklist for the testlist TUI application",
-        created: "2025-01-24T00:00:00Z",
-        version: "1.0",
+        title: "testlist App — Post-Refactor Verification",
+        description: "Manual testing after DOP architecture refactor and bug fixes",
+        created: "2026-02-02T00:00:00Z",
+        version: "2.0",
     ),
     tests: [
-        // Navigation Tests
+        // === Bug Fix Verification ===
+        Test(
+            id: "bugfix-focus-notes",
+            title: "Bug fix: focus returns after notes editing",
+            description: "Verify that pressing status keys works immediately after editing notes. Before the fix, focus stayed on the Notes pane after Esc, so p/f/i/s did nothing.",
+            setup: [
+                ChecklistItem(id: "bfn-1", text: "Select any test (on its header row)"),
+                ChecklistItem(id: "bfn-2", text: "Confirm Tests pane is focused (cyan border)"),
+            ],
+            action: "Press n to edit notes, type something, press Esc, then press p",
+            verify: [
+                ChecklistItem(id: "bfn-v1", text: "After Esc, Tests pane border is cyan (focused)"),
+                ChecklistItem(id: "bfn-v2", text: "Notes pane border is gray (unfocused)"),
+                ChecklistItem(id: "bfn-v3", text: "Status changes to Passed [✓] immediately"),
+            ],
+            suggested_command: None,
+        ),
+        Test(
+            id: "bugfix-focus-screenshot",
+            title: "Bug fix: focus returns after screenshot input",
+            description: "Verify focus returns to Tests pane after adding or cancelling a screenshot.",
+            setup: [
+                ChecklistItem(id: "bfs-1", text: "Select any test (on its header row)"),
+            ],
+            action: "Press a, type a path, press Enter. Then press a again, press Esc. Then press f.",
+            verify: [
+                ChecklistItem(id: "bfs-v1", text: "After Enter, focus returns to Tests pane"),
+                ChecklistItem(id: "bfs-v2", text: "After Esc, focus returns to Tests pane"),
+                ChecklistItem(id: "bfs-v3", text: "Status key f marks test as Failed [✗]"),
+            ],
+            suggested_command: None,
+        ),
+        Test(
+            id: "bugfix-small-terminal",
+            title: "Bug fix: status bar visible on small terminals",
+            description: "Verify the status bar at the bottom is visible when the terminal is short. Before the fix, terminals under ~19 rows would hide it.",
+            setup: [
+                ChecklistItem(id: "bst-1", text: "Start the app at normal size"),
+            ],
+            action: "Shrink your terminal window to about 15 rows tall",
+            verify: [
+                ChecklistItem(id: "bst-v1", text: "Status bar is visible at the bottom"),
+                ChecklistItem(id: "bst-v2", text: "Status bar shows keyboard shortcuts"),
+                ChecklistItem(id: "bst-v3", text: "Tests pane is still usable (may be small)"),
+            ],
+            suggested_command: None,
+        ),
+
+        // === Core Navigation ===
         Test(
             id: "nav-jk",
             title: "Navigate with j/k keys",
             description: "Test basic navigation through the test list using vim-style keys",
             setup: [
-                "Launch the app with this testlist",
-                "Ensure Tests pane is focused (use Tab if needed)",
+                ChecklistItem(id: "njk-1", text: "Ensure Tests pane is focused (use Tab if needed)"),
             ],
             action: "Press j and k keys to navigate up and down",
             verify: [
-                "j moves selection down to next test",
-                "k moves selection up to previous test",
-                "Selection wraps or stops at boundaries",
-            ],
-            suggested_command: None,
-        ),
-        Test(
-            id: "nav-arrows",
-            title: "Navigate with arrow keys",
-            description: "Test navigation using standard arrow keys",
-            setup: [],
-            action: "Press Up/Down arrow keys to navigate",
-            verify: [
-                "Down arrow moves selection down",
-                "Up arrow moves selection up",
+                ChecklistItem(id: "njk-v1", text: "j moves selection down to next test"),
+                ChecklistItem(id: "njk-v2", text: "k moves selection up to previous test"),
+                ChecklistItem(id: "njk-v3", text: "Selection stops at boundaries"),
             ],
             suggested_command: None,
         ),
@@ -41,13 +77,13 @@ Testlist(
             title: "Expand and collapse tests",
             description: "Test expanding tests to see details",
             setup: [
-                "Select a test with setup/verify steps",
+                ChecklistItem(id: "nex-1", text: "Select a test with setup/verify steps"),
             ],
             action: "Press Enter or l to expand, press again to collapse",
             verify: [
-                "Test expands to show Setup, Action, and Verify sections",
-                "Pressing again collapses the test",
-                "Arrow indicator changes (▶ to ▼)",
+                ChecklistItem(id: "nex-v1", text: "Test expands to show Setup, Action, and Verify sections"),
+                ChecklistItem(id: "nex-v2", text: "Pressing again collapses the test"),
+                ChecklistItem(id: "nex-v3", text: "Arrow indicator changes (▶ to ▼)"),
             ],
             suggested_command: None,
         ),
@@ -56,33 +92,57 @@ Testlist(
             title: "Navigate within expanded test",
             description: "Test navigating through sub-items in an expanded test",
             setup: [
-                "Expand a test that has setup and verify steps",
+                ChecklistItem(id: "nsi-1", text: "Expand a test that has setup and verify steps"),
             ],
             action: "Use j/k to navigate through setup items, action, and verify items",
             verify: [
-                "Can select individual setup checklist items",
-                "Can select the action line",
-                "Can select individual verify checklist items",
-                "Selection highlight moves correctly",
-            ],
-            suggested_command: None,
-        ),
-        Test(
-            id: "nav-scroll",
-            title: "Test pane scrolling",
-            description: "Verify scrolling works when there are many items",
-            setup: [
-                "Expand multiple tests to fill the visible area",
-            ],
-            action: "Navigate down past the visible area",
-            verify: [
-                "Pane scrolls to keep selection visible",
-                "Title shows scroll position indicator",
+                ChecklistItem(id: "nsi-v1", text: "Can select individual setup checklist items"),
+                ChecklistItem(id: "nsi-v2", text: "Can select the action line"),
+                ChecklistItem(id: "nsi-v3", text: "Can select individual verify checklist items"),
+                ChecklistItem(id: "nsi-v4", text: "Selection highlight moves correctly"),
             ],
             suggested_command: None,
         ),
 
-        // Pane Focus Tests
+        // === Status Marking ===
+        Test(
+            id: "status-all",
+            title: "Mark test with all statuses",
+            description: "Test all four status keys on a test header",
+            setup: [
+                ChecklistItem(id: "sa-1", text: "Select a test (on its header row)"),
+                ChecklistItem(id: "sa-2", text: "Ensure Tests pane is focused"),
+            ],
+            action: "Press p, then f, then i, then s, observing the icon each time",
+            verify: [
+                ChecklistItem(id: "sa-v1", text: "p shows [✓] (Passed)"),
+                ChecklistItem(id: "sa-v2", text: "f shows [✗] (Failed)"),
+                ChecklistItem(id: "sa-v3", text: "i shows [?] (Inconclusive)"),
+                ChecklistItem(id: "sa-v4", text: "s shows [-] (Skipped)"),
+                ChecklistItem(id: "sa-v5", text: "Progress count in title updates"),
+            ],
+            suggested_command: None,
+        ),
+
+        // === Checklist Toggling ===
+        Test(
+            id: "checklist-toggle",
+            title: "Toggle checklist items with Space",
+            description: "Test toggling setup and verify checklist items",
+            setup: [
+                ChecklistItem(id: "ct-1", text: "Expand a test with setup/verify items"),
+                ChecklistItem(id: "ct-2", text: "Navigate to a checklist item"),
+            ],
+            action: "Press Space to toggle the item",
+            verify: [
+                ChecklistItem(id: "ct-v1", text: "Checkbox toggles between [ ] and [✓]"),
+                ChecklistItem(id: "ct-v2", text: "Can toggle setup items"),
+                ChecklistItem(id: "ct-v3", text: "Can toggle verify items"),
+            ],
+            suggested_command: None,
+        ),
+
+        // === Pane Focus ===
         Test(
             id: "focus-tab",
             title: "Cycle pane focus with Tab",
@@ -90,9 +150,9 @@ Testlist(
             setup: [],
             action: "Press Tab repeatedly",
             verify: [
-                "Focus cycles: Tests → Notes → Terminal → Tests",
-                "Focused pane has cyan/blue border",
-                "Unfocused panes have gray border",
+                ChecklistItem(id: "ft-v1", text: "Focus cycles: Tests → Notes → Terminal → Tests"),
+                ChecklistItem(id: "ft-v2", text: "Focused pane has cyan/blue border"),
+                ChecklistItem(id: "ft-v3", text: "Unfocused panes have gray border"),
             ],
             suggested_command: None,
         ),
@@ -103,195 +163,66 @@ Testlist(
             setup: [],
             action: "Click on different panes",
             verify: [
-                "Clicking Tests pane focuses it",
-                "Clicking Notes pane focuses it",
-                "Clicking Terminal pane focuses it",
+                ChecklistItem(id: "fm-v1", text: "Clicking Tests pane focuses it"),
+                ChecklistItem(id: "fm-v2", text: "Clicking Notes pane focuses it"),
+                ChecklistItem(id: "fm-v3", text: "Clicking Terminal pane focuses it"),
             ],
             suggested_command: None,
         ),
 
-        // Status Marking Tests
-        Test(
-            id: "status-pass",
-            title: "Mark test as Passed",
-            description: "Test marking a test as passed",
-            setup: [
-                "Select a test (on its header row)",
-            ],
-            action: "Press p to mark as Passed",
-            verify: [
-                "Status icon changes to [✓]",
-                "Progress count in title updates",
-            ],
-            suggested_command: None,
-        ),
-        Test(
-            id: "status-fail",
-            title: "Mark test as Failed",
-            description: "Test marking a test as failed",
-            setup: [
-                "Select a test (on its header row)",
-            ],
-            action: "Press f to mark as Failed",
-            verify: [
-                "Status icon changes to [✗]",
-            ],
-            suggested_command: None,
-        ),
-        Test(
-            id: "status-inconclusive",
-            title: "Mark test as Inconclusive",
-            description: "Test marking a test as inconclusive",
-            setup: [
-                "Select a test (on its header row)",
-            ],
-            action: "Press i to mark as Inconclusive",
-            verify: [
-                "Status icon changes to [?]",
-            ],
-            suggested_command: None,
-        ),
-        Test(
-            id: "status-skip",
-            title: "Mark test as Skipped",
-            description: "Test marking a test as skipped",
-            setup: [
-                "Select a test (on its header row)",
-            ],
-            action: "Press s to mark as Skipped",
-            verify: [
-                "Status icon changes to [-]",
-            ],
-            suggested_command: None,
-        ),
-
-        // Checklist Tests
-        Test(
-            id: "checklist-toggle",
-            title: "Toggle checklist items",
-            description: "Test toggling setup and verify checklist items",
-            setup: [
-                "Expand a test with setup/verify items",
-                "Navigate to a checklist item",
-            ],
-            action: "Press Space to toggle the item",
-            verify: [
-                "Checkbox toggles between [ ] and [✓]",
-                "Can toggle setup items",
-                "Can toggle verify items",
-            ],
-            suggested_command: None,
-        ),
-
-        // Notes Tests
+        // === Notes ===
         Test(
             id: "notes-edit",
-            title: "Edit notes",
+            title: "Edit and save notes",
             description: "Test adding and editing notes for a test",
             setup: [
-                "Select any test",
+                ChecklistItem(id: "ne-1", text: "Select any test"),
             ],
-            action: "Press n to enter notes editing mode",
+            action: "Press n to enter editing, type text, press Enter for newline, press Esc to save",
             verify: [
-                "Focus moves to Notes pane",
-                "Title shows 'EDITING'",
-                "Can type text",
-                "Enter adds newlines",
-                "Backspace deletes characters",
-            ],
-            suggested_command: None,
-        ),
-        Test(
-            id: "notes-save",
-            title: "Save notes with Esc",
-            description: "Test saving notes and exiting edit mode",
-            setup: [
-                "Enter notes editing mode and type some text",
-            ],
-            action: "Press Esc to save and exit",
-            verify: [
-                "Edit mode exits",
-                "Notes are saved and displayed",
-            ],
-            suggested_command: None,
-        ),
-        Test(
-            id: "screenshot-add",
-            title: "Add screenshot path",
-            description: "Test adding a screenshot file path",
-            setup: [
-                "Select any test",
-            ],
-            action: "Press a, type a path, press Enter",
-            verify: [
-                "Screenshot input mode activates",
-                "Can type a file path",
-                "Enter confirms and adds to list",
-                "Esc cancels without adding",
+                ChecklistItem(id: "ne-v1", text: "Notes pane shows 'EDITING' in title"),
+                ChecklistItem(id: "ne-v2", text: "Can type text with cursor indicator"),
+                ChecklistItem(id: "ne-v3", text: "Enter adds newlines"),
+                ChecklistItem(id: "ne-v4", text: "Backspace deletes characters"),
+                ChecklistItem(id: "ne-v5", text: "Esc saves and notes remain displayed"),
             ],
             suggested_command: None,
         ),
 
-        // Terminal Tests
+        // === Terminal ===
         Test(
             id: "terminal-basic",
-            title: "Basic terminal usage",
+            title: "Embedded terminal works",
             description: "Test the embedded terminal",
             setup: [
-                "Focus the Terminal pane (Tab or click)",
+                ChecklistItem(id: "tb-1", text: "Focus the Terminal pane (Tab or click)"),
             ],
-            action: "Type a simple command like 'ls' and press Enter",
+            action: "Type 'ls' and press Enter",
             verify: [
-                "Terminal accepts input",
-                "Command executes and output appears",
-                "Cursor is visible when focused",
+                ChecklistItem(id: "tb-v1", text: "Terminal accepts input"),
+                ChecklistItem(id: "tb-v2", text: "Command executes and output appears"),
+                ChecklistItem(id: "tb-v3", text: "Cursor is visible when focused"),
+                ChecklistItem(id: "tb-v4", text: "Esc returns focus to Tests pane"),
             ],
             suggested_command: Some("ls -la"),
         ),
         Test(
-            id: "terminal-escape",
-            title: "Exit terminal focus with Esc",
-            description: "Test exiting terminal focus",
-            setup: [
-                "Focus the Terminal pane",
-            ],
-            action: "Press Esc",
-            verify: [
-                "Focus returns to Tests pane",
-            ],
-            suggested_command: None,
-        ),
-        Test(
             id: "terminal-suggested",
             title: "Insert suggested command",
-            description: "Test inserting a test's suggested command",
+            description: "Test inserting a test's suggested command with c key",
             setup: [
-                "Select a test that has a suggested command",
+                ChecklistItem(id: "ts-1", text: "Select this test (which has a suggested command)"),
             ],
             action: "Press c",
             verify: [
-                "Command is typed into terminal",
-                "Terminal pane is focused",
-                "Can press Enter to execute",
+                ChecklistItem(id: "ts-v1", text: "Command is typed into terminal"),
+                ChecklistItem(id: "ts-v2", text: "Terminal pane is focused"),
+                ChecklistItem(id: "ts-v3", text: "Can press Enter to execute"),
             ],
             suggested_command: Some("echo 'Hello from suggested command'"),
         ),
-        Test(
-            id: "terminal-history",
-            title: "Terminal command history",
-            description: "Test shell history with arrow keys",
-            setup: [
-                "Focus terminal and run a few commands",
-            ],
-            action: "Press Up arrow to recall previous commands",
-            verify: [
-                "Previous commands appear at prompt",
-                "Down arrow goes forward in history",
-            ],
-            suggested_command: None,
-        ),
 
-        // Theme Tests
+        // === Theme ===
         Test(
             id: "theme-toggle",
             title: "Toggle theme",
@@ -299,85 +230,44 @@ Testlist(
             setup: [],
             action: "Press t to toggle theme",
             verify: [
-                "Theme switches between dark and light",
-                "All panes update colors appropriately",
-                "Status bar updates colors",
+                ChecklistItem(id: "tt-v1", text: "Theme switches between dark and light"),
+                ChecklistItem(id: "tt-v2", text: "All panes update colors"),
+                ChecklistItem(id: "tt-v3", text: "Status bar updates colors"),
             ],
             suggested_command: None,
         ),
 
-        // Quit Tests
-        Test(
-            id: "quit-clean",
-            title: "Quit without changes",
-            description: "Test quitting when no changes have been made",
-            setup: [
-                "Start fresh without making any changes",
-            ],
-            action: "Press q",
-            verify: [
-                "App exits immediately without confirmation",
-            ],
-            suggested_command: None,
-        ),
+        // === Quit and Save ===
         Test(
             id: "quit-confirm",
             title: "Quit with unsaved changes",
             description: "Test quit confirmation dialog",
             setup: [
-                "Make a change (mark a test, add notes, etc.)",
+                ChecklistItem(id: "qc-1", text: "Make a change (mark a test, add notes, etc.)"),
             ],
             action: "Press q",
             verify: [
-                "Confirmation dialog appears",
-                "Dialog shows 'You have unsaved changes'",
-                "y confirms quit",
-                "n or Esc cancels",
+                ChecklistItem(id: "qc-v1", text: "Confirmation dialog appears"),
+                ChecklistItem(id: "qc-v2", text: "n or Esc cancels and returns to app"),
+                ChecklistItem(id: "qc-v3", text: "y confirms quit"),
             ],
             suggested_command: None,
         ),
-
-        // Results Persistence Tests
         Test(
-            id: "results-save",
-            title: "Results are saved on quit",
-            description: "Verify results file is written correctly",
+            id: "results-persist",
+            title: "Results persist across sessions",
+            description: "Verify results are saved and can be reloaded",
             setup: [
-                "Make some changes (status, notes, checklists)",
-                "Note the expected values",
+                ChecklistItem(id: "rp-1", text: "Mark some tests, toggle some checklists, add notes"),
+                ChecklistItem(id: "rp-2", text: "Quit the app (q then y)"),
             ],
-            action: "Quit the app (q, then y if prompted)",
+            action: "Relaunch with: cargo run -- testlist-app.testlist.ron --continue",
             verify: [
-                "Results file is created/updated",
-                "Re-launching with --continue loads previous state",
-                "All statuses, notes, and checklists are preserved",
+                ChecklistItem(id: "rp-v1", text: "All statuses are preserved"),
+                ChecklistItem(id: "rp-v2", text: "Notes are preserved"),
+                ChecklistItem(id: "rp-v3", text: "Checklist toggles are preserved"),
             ],
-            suggested_command: Some("cat testlist-app.testlist.results.ron"),
-        ),
-
-        // CLI Tests
-        Test(
-            id: "cli-new",
-            title: "Create new testlist with --new",
-            description: "Test creating a new testlist template",
-            setup: [],
-            action: "Run: testlist --new /tmp/test-new.testlist.ron",
-            verify: [
-                "Template file is created",
-                "Contains example tests with setup/verify",
-            ],
-            suggested_command: Some("cargo run -- --new /tmp/test-new.testlist.ron && cat /tmp/test-new.testlist.ron"),
-        ),
-        Test(
-            id: "cli-tester",
-            title: "Specify tester name",
-            description: "Test the --tester flag",
-            setup: [],
-            action: "Run with --tester 'Your Name'",
-            verify: [
-                "Results file contains the tester name",
-            ],
-            suggested_command: Some("cargo run -- testlist-app.testlist.ron --tester 'Test User'"),
+            suggested_command: Some("cargo run -- testlist-app.testlist.ron --continue"),
         ),
     ],
 )
