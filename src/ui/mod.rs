@@ -80,19 +80,27 @@ fn main_loop(
 }
 
 fn handle_mouse(state: &mut AppState, mouse: crossterm::event::MouseEvent, areas: &LayoutAreas) {
+    // Don't change focus via mouse during editing modes
+    if state.editing_notes || state.adding_screenshot || state.confirm_quit {
+        return;
+    }
+
+    // Only change focus on left click, not on scroll/motion/drag/release
+    let MouseEventKind::Down(MouseButton::Left) = mouse.kind else {
+        return;
+    };
+
     let x = mouse.column;
     let y = mouse.row;
 
     if areas.tests_pane.contains((x, y).into()) {
         state.focused_pane = FocusedPane::Tests;
 
-        if let MouseEventKind::Down(MouseButton::Left) = mouse.kind {
-            let relative_y = y.saturating_sub(areas.tests_pane.y + 1) as usize;
-            let absolute_y = relative_y + state.tests_scroll_offset;
+        let relative_y = y.saturating_sub(areas.tests_pane.y + 1) as usize;
+        let absolute_y = relative_y + state.tests_scroll_offset;
 
-            if let Some(test_idx) = map_y_to_test_index(state, absolute_y) {
-                state.selected_test = test_idx;
-            }
+        if let Some(test_idx) = map_y_to_test_index(state, absolute_y) {
+            state.selected_test = test_idx;
         }
     } else if areas.notes_pane.contains((x, y).into()) {
         state.focused_pane = FocusedPane::Notes;
@@ -171,8 +179,16 @@ fn handle_key(
                 test_transforms::toggle_checklist(state);
             }
         }
-        KeyCode::Char('n') => ui_transforms::enter_notes_edit(state),
-        KeyCode::Char('a') => ui_transforms::start_screenshot(state),
+        KeyCode::Char('n') => {
+            if state.focused_pane == FocusedPane::Tests {
+                ui_transforms::enter_notes_edit(state);
+            }
+        }
+        KeyCode::Char('a') => {
+            if state.focused_pane == FocusedPane::Tests {
+                ui_transforms::start_screenshot(state);
+            }
+        }
         KeyCode::Char('p') => {
             if state.focused_pane == FocusedPane::Tests
                 && state.sub_selection == SubSelection::Header
@@ -426,6 +442,148 @@ mod tests {
             status_bar.height >= 1,
             "BUG 2: Status bar must be visible even on 10-row terminal, got height={}",
             status_bar.height
+        );
+    }
+
+    // === Integration test: handle_key dispatch ===
+    // Reproduce user-reported bug: p/f/i/s stops working after notes editing
+
+    fn make_test_state() -> AppState {
+        use crate::data::definition::{ChecklistItem, Meta, Test, Testlist};
+        use crate::data::results::TestlistResults;
+
+        let testlist = Testlist {
+            meta: Meta {
+                title: "Test".to_string(),
+                description: "".to_string(),
+                created: "".to_string(),
+                version: "1".to_string(),
+            },
+            tests: vec![Test {
+                id: "t1".to_string(),
+                title: "Test 1".to_string(),
+                description: "".to_string(),
+                setup: vec![ChecklistItem {
+                    id: "s0".to_string(),
+                    text: "Step".to_string(),
+                }],
+                action: "Do it".to_string(),
+                verify: vec![ChecklistItem {
+                    id: "v0".to_string(),
+                    text: "Check".to_string(),
+                }],
+                suggested_command: None,
+            }],
+        };
+        let results = TestlistResults::new_for_testlist(&testlist, "test.ron", "tester");
+        AppState::new(
+            testlist,
+            results,
+            std::path::PathBuf::from("test.testlist.ron"),
+            std::path::PathBuf::from("test.testlist.results.ron"),
+        )
+    }
+
+    #[test]
+    fn test_status_key_works_after_notes_editing() {
+        use crate::data::results::Status;
+        use crate::data::state::{FocusedPane, SubSelection};
+
+        let mut state = make_test_state();
+        let mut pty: Option<EmbeddedTerminal> = None;
+        let no_mods = KeyModifiers::empty();
+
+        // Initial state: Tests focused, Header selected
+        assert_eq!(state.focused_pane, FocusedPane::Tests);
+        assert_eq!(state.sub_selection, SubSelection::Header);
+
+        // Step 1: Press 'p' — should set status to Passed
+        handle_key(&mut state, KeyCode::Char('p'), no_mods, &mut pty);
+        assert_eq!(
+            state.results.results[0].status,
+            Status::Passed,
+            "Initial 'p' should set Passed"
+        );
+
+        // Step 2: Press 'n' — enter notes editing
+        handle_key(&mut state, KeyCode::Char('n'), no_mods, &mut pty);
+        assert!(state.editing_notes, "Should be in editing mode");
+        assert_eq!(state.focused_pane, FocusedPane::Notes);
+
+        // Step 3: Type some text
+        handle_key(&mut state, KeyCode::Char('h'), no_mods, &mut pty);
+        handle_key(&mut state, KeyCode::Char('i'), no_mods, &mut pty);
+        assert_eq!(state.notes_input, "hi");
+
+        // Step 4: Press Esc to save notes
+        handle_key(&mut state, KeyCode::Esc, no_mods, &mut pty);
+        assert!(
+            !state.editing_notes,
+            "Should exit editing mode after Esc"
+        );
+        assert_eq!(
+            state.focused_pane,
+            FocusedPane::Tests,
+            "Focus should return to Tests after Esc"
+        );
+        assert_eq!(
+            state.sub_selection,
+            SubSelection::Header,
+            "Sub-selection should still be Header"
+        );
+
+        // Verify notes were saved
+        assert_eq!(
+            state.results.results[0].notes,
+            Some("hi".to_string()),
+            "Notes should be saved"
+        );
+
+        // Step 5: Press 'f' — should change status to Failed
+        handle_key(&mut state, KeyCode::Char('f'), no_mods, &mut pty);
+        assert_eq!(
+            state.results.results[0].status,
+            Status::Failed,
+            "BUG: 'f' should work after notes editing — status should be Failed"
+        );
+
+        // Step 6: Press 'i' — should change status to Inconclusive
+        handle_key(&mut state, KeyCode::Char('i'), no_mods, &mut pty);
+        assert_eq!(
+            state.results.results[0].status,
+            Status::Inconclusive,
+            "'i' should work after notes editing"
+        );
+    }
+
+    #[test]
+    fn test_status_key_works_after_notes_then_navigate() {
+        use crate::data::results::Status;
+        use crate::data::state::SubSelection;
+
+        let mut state = make_test_state();
+        let mut pty: Option<EmbeddedTerminal> = None;
+        let no_mods = KeyModifiers::empty();
+
+        // Edit notes
+        handle_key(&mut state, KeyCode::Char('n'), no_mods, &mut pty);
+        handle_key(&mut state, KeyCode::Char('x'), no_mods, &mut pty);
+        handle_key(&mut state, KeyCode::Esc, no_mods, &mut pty);
+
+        // Navigate down then back up (j then k)
+        handle_key(&mut state, KeyCode::Char('j'), no_mods, &mut pty);
+        handle_key(&mut state, KeyCode::Char('k'), no_mods, &mut pty);
+
+        // Wait — there's only 1 test, so j does nothing (at boundary)
+        assert_eq!(state.selected_test, 0);
+        assert_eq!(state.sub_selection, SubSelection::Header);
+
+        // Try status key
+        handle_key(&mut state, KeyCode::Char('p'), no_mods, &mut pty);
+        assert_eq!(
+            state.results.results[0].status,
+            Status::Passed,
+            "'p' should work after notes + navigation"
         );
     }
 
