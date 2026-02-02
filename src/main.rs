@@ -1,9 +1,9 @@
-mod error;
-mod schema;
-mod tui;
-
 use clap::Parser;
 use std::path::PathBuf;
+
+use testlist::actions::files;
+use testlist::data::results::TestlistResults;
+use testlist::data::state::AppState;
 
 /// Structured human feedback collection tool
 #[derive(Parser, Debug)]
@@ -36,7 +36,7 @@ fn main() {
 
     // Handle --new flag: create template and exit
     if let Some(path) = args.new {
-        if let Err(e) = create_template(&path) {
+        if let Err(e) = files::create_template(&path) {
             eprintln!("Error creating template: {}", e);
             std::process::exit(1);
         }
@@ -52,25 +52,21 @@ fn main() {
     };
 
     // Get tester name
-    let tester = args.tester.unwrap_or_else(|| {
-        std::env::var("USER").unwrap_or_else(|_| "unknown".to_string())
-    });
+    let tester = args
+        .tester
+        .unwrap_or_else(|| std::env::var("USER").unwrap_or_else(|_| "unknown".to_string()));
 
     // Determine results path
     let results_path = args.results.unwrap_or_else(|| {
         let mut path = testlist_path.clone();
         let stem = path.file_stem().unwrap_or_default().to_string_lossy();
-        let new_name = if stem.ends_with(".testlist") {
-            format!("{}.results.ron", stem)
-        } else {
-            format!("{}.results.ron", stem)
-        };
+        let new_name = format!("{}.results.ron", stem);
         path.set_file_name(new_name);
         path
     });
 
     // Load testlist
-    let testlist = match schema::Testlist::load(&testlist_path) {
+    let testlist = match files::load_testlist(&testlist_path) {
         Ok(t) => t,
         Err(e) => {
             eprintln!("Error loading testlist: {}", e);
@@ -80,7 +76,7 @@ fn main() {
 
     // Load or create results
     let results = if args.continue_from && results_path.exists() {
-        match schema::Results::load(&results_path) {
+        match files::load_results(&results_path, &testlist) {
             Ok(r) => r,
             Err(e) => {
                 eprintln!("Error loading results: {}", e);
@@ -88,91 +84,22 @@ fn main() {
             }
         }
     } else {
-        schema::Results::new_for_testlist(
-            &testlist,
-            &testlist_path.to_string_lossy(),
-            &tester,
-        )
+        TestlistResults::new_for_testlist(&testlist, &testlist_path.to_string_lossy(), &tester)
     };
 
     // Create app state and run TUI
-    let mut state = tui::AppState::new(testlist, results, testlist_path, results_path.clone());
+    let mut state = AppState::new(testlist, results, testlist_path, results_path.clone());
 
-    if let Err(e) = tui::run(&mut state) {
+    if let Err(e) = testlist::ui::app::run(&mut state) {
         eprintln!("Error running TUI: {}", e);
         std::process::exit(1);
     }
 
     // Save results on exit
-    if let Err(e) = state.results.save(&results_path) {
+    if let Err(e) = files::save_results(&state.results, &results_path) {
         eprintln!("Error saving results: {}", e);
         std::process::exit(1);
     }
 
     println!("Results saved to: {}", results_path.display());
-}
-
-/// Create a new testlist template file.
-fn create_template(path: &PathBuf) -> std::io::Result<()> {
-    let template = r##"Testlist(
-    meta: Meta(
-        title: "My Test Checklist",
-        description: "Description of what you're testing",
-        created: "2025-01-24T00:00:00Z",
-        version: "1",
-    ),
-    tests: [
-        Test(
-            id: "build",
-            title: "Build the project",
-            description: "Verify the project builds without errors.",
-            setup: [],
-            action: "Run the build command",
-            verify: [
-                "Build completes without errors",
-                "No warnings in output",
-            ],
-            suggested_command: Some("cargo build"),
-        ),
-        Test(
-            id: "tests",
-            title: "Run test suite",
-            description: "Verify all tests pass.",
-            setup: [
-                "Ensure build completed successfully",
-            ],
-            action: "Run the test suite",
-            verify: [
-                "All tests pass",
-                "No flaky tests",
-            ],
-            suggested_command: Some("cargo test"),
-        ),
-        Test(
-            id: "manual-check",
-            title: "Manual verification",
-            description: r#"
-Perform manual testing of the application.
-
-Pay attention to:
-- User interface responsiveness
-- Error handling
-- Edge cases
-            "#,
-            setup: [
-                "Start the application",
-                "Prepare test data",
-            ],
-            action: "Test the main features manually",
-            verify: [
-                "Features work as expected",
-                "No crashes or errors",
-                "Performance is acceptable",
-            ],
-            suggested_command: None,
-        ),
-    ],
-)
-"##;
-    std::fs::write(path, template)
 }
