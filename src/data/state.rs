@@ -108,6 +108,10 @@ pub struct AppState {
     pub show_help: bool,
     // UI theme
     pub theme: Theme,
+    // Quit dialog selection: 0 = Yes (save+quit), 1 = No (quit without saving)
+    pub quit_selection: u8,
+    // Skip saving on quit
+    pub skip_save: bool,
 }
 
 impl AppState {
@@ -137,6 +141,8 @@ impl AppState {
             confirm_quit: false,
             show_help: false,
             theme: Theme::Dark,
+            quit_selection: 0,
+            skip_save: false,
         }
     }
 }

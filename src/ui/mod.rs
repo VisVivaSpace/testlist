@@ -124,10 +124,20 @@ fn handle_key(
     // Handle quit confirmation dialog
     if state.confirm_quit {
         match key {
-            KeyCode::Char('y') | KeyCode::Char('Y') => ui_transforms::confirm_quit(state),
-            KeyCode::Char('n') | KeyCode::Char('N') | KeyCode::Esc => {
-                ui_transforms::cancel_quit(state)
+            KeyCode::Left | KeyCode::Char('h') => state.quit_selection = 0,
+            KeyCode::Right | KeyCode::Char('l') => state.quit_selection = 1,
+            KeyCode::Enter => {
+                if state.quit_selection == 0 {
+                    ui_transforms::confirm_quit(state);
+                } else {
+                    ui_transforms::quit_without_saving(state);
+                }
             }
+            KeyCode::Char('y') | KeyCode::Char('Y') => ui_transforms::confirm_quit(state),
+            KeyCode::Char('n') | KeyCode::Char('N') => {
+                ui_transforms::quit_without_saving(state)
+            }
+            KeyCode::Esc => ui_transforms::cancel_quit(state),
             _ => {}
         }
         return;
@@ -329,6 +339,8 @@ fn draw(frame: &mut Frame, state: &AppState, pty: &Option<EmbeddedTerminal>) -> 
 }
 
 fn draw_quit_dialog(frame: &mut Frame, state: &AppState, area: Rect) {
+    use ratatui::text::Span;
+
     let theme = state.theme;
     let dialog_width = 40;
     let dialog_height = 5;
@@ -338,9 +350,36 @@ fn draw_quit_dialog(frame: &mut Frame, state: &AppState, area: Rect) {
 
     frame.render_widget(Clear, dialog_area);
 
+    let (yes_style, no_style) = if state.quit_selection == 0 {
+        (
+            Style::default().fg(theme.accent()),
+            Style::default().fg(theme.dim()),
+        )
+    } else {
+        (
+            Style::default().fg(theme.dim()),
+            Style::default().fg(theme.accent()),
+        )
+    };
+
+    let yes_label = if state.quit_selection == 0 {
+        "► [Yes]"
+    } else {
+        "  [Yes]"
+    };
+    let no_label = if state.quit_selection == 1 {
+        "► [No]"
+    } else {
+        "  [No]"
+    };
+
     let text = vec![
         Line::from(""),
-        Line::from("Save changes and quit? (y/n)"),
+        Line::from(" Save changes before quitting?"),
+        Line::from(vec![
+            Span::styled(format!("    {}", yes_label), yes_style),
+            Span::styled(format!("    {}", no_label), no_style),
+        ]),
     ];
 
     let dialog = Paragraph::new(text)
@@ -358,7 +397,7 @@ fn draw_quit_dialog(frame: &mut Frame, state: &AppState, area: Rect) {
 fn draw_help_dialog(frame: &mut Frame, state: &AppState, area: Rect) {
     let theme = state.theme;
     let dialog_width = 54u16;
-    let dialog_height = 18u16;
+    let dialog_height = 19u16;
     let x = area.width.saturating_sub(dialog_width) / 2;
     let y = area.height.saturating_sub(dialog_height) / 2;
     let dialog_area = Rect::new(x, y, dialog_width, dialog_height);
@@ -382,6 +421,8 @@ fn draw_help_dialog(frame: &mut Frame, state: &AppState, area: Rect) {
         Line::from(""),
         Line::from(" Other"),
         Line::from("   w  Save     t  Theme     ?  Help     q  Quit"),
+        Line::from(""),
+        Line::from(" Press ? or Esc to close"),
     ];
 
     let dialog = Paragraph::new(text)

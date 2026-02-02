@@ -95,11 +95,12 @@ fn main() {
         std::process::exit(1);
     }
 
-    // Save results on exit
-    if let Err(e) = files::save_results(&state.results, &results_path) {
-        eprintln!("Error saving results: {}", e);
-        std::process::exit(1);
+    // Save results on exit (unless user chose to quit without saving)
+    if !state.skip_save {
+        if let Err(e) = files::save_results(&state.results, &results_path) {
+            eprintln!("Error saving results: {}", e);
+            std::process::exit(1);
+        }
+        println!("Results saved to: {}", results_path.display());
     }
-
-    println!("Results saved to: {}", results_path.display());
 }

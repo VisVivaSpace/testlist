@@ -97,13 +97,20 @@ pub fn toggle_expand(state: &mut AppState) {
 pub fn request_quit(state: &mut AppState) {
     if state.dirty {
         state.confirm_quit = true;
+        state.quit_selection = 0;
     } else {
         state.should_quit = true;
     }
 }
 
-/// Confirm quit (from dialog).
+/// Confirm quit (from dialog) — save and quit.
 pub fn confirm_quit(state: &mut AppState) {
+    state.should_quit = true;
+}
+
+/// Quit without saving (from dialog).
+pub fn quit_without_saving(state: &mut AppState) {
+    state.skip_save = true;
     state.should_quit = true;
 }
 
