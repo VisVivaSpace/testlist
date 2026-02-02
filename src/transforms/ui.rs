@@ -111,3 +111,130 @@ pub fn confirm_quit(state: &mut AppState) {
 pub fn cancel_quit(state: &mut AppState) {
     state.confirm_quit = false;
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::data::definition::{ChecklistItem, Meta, Test, Testlist};
+    use crate::data::results::{Status, TestlistResults};
+    use crate::data::state::SubSelection;
+    use crate::transforms::tests::set_status;
+
+    fn make_state() -> AppState {
+        let testlist = Testlist {
+            meta: Meta {
+                title: "Test".to_string(),
+                description: "".to_string(),
+                created: "".to_string(),
+                version: "1".to_string(),
+            },
+            tests: vec![Test {
+                id: "t1".to_string(),
+                title: "Test 1".to_string(),
+                description: "".to_string(),
+                setup: vec![ChecklistItem {
+                    id: "s0".to_string(),
+                    text: "Step".to_string(),
+                }],
+                action: "Do it".to_string(),
+                verify: vec![ChecklistItem {
+                    id: "v0".to_string(),
+                    text: "Check".to_string(),
+                }],
+                suggested_command: None,
+            }],
+        };
+        let results = TestlistResults::new_for_testlist(&testlist, "test.ron", "tester");
+        AppState::new(
+            testlist,
+            results,
+            std::path::PathBuf::from("test.testlist.ron"),
+            std::path::PathBuf::from("test.testlist.results.ron"),
+        )
+    }
+
+    // === Bug 1 verification tests ===
+    // After editing notes (n -> type -> Esc), focus must return to Tests pane
+    // so that status keys (p/f/i/s) work immediately.
+
+    #[test]
+    fn test_bug1_notes_edit_then_status_key() {
+        let mut state = make_state();
+        assert_eq!(state.focused_pane, FocusedPane::Tests);
+        assert_eq!(state.sub_selection, SubSelection::Header);
+
+        // User presses 'n' to edit notes
+        enter_notes_edit(&mut state);
+        assert_eq!(state.focused_pane, FocusedPane::Notes);
+        assert!(state.editing_notes);
+
+        // User types some notes
+        state.notes_input.push_str("looks good");
+
+        // User presses Esc to save
+        save_notes(&mut state);
+        assert!(!state.editing_notes);
+        assert_eq!(
+            state.focused_pane,
+            FocusedPane::Tests,
+            "BUG 1: Focus must return to Tests after notes Esc"
+        );
+
+        // Now user presses 'p' — this should work because focus is Tests + Header
+        assert_eq!(state.sub_selection, SubSelection::Header);
+        set_status(&mut state, Status::Passed);
+        assert_eq!(
+            state.results.results[0].status,
+            Status::Passed,
+            "BUG 1: Status key must work after exiting notes"
+        );
+    }
+
+    #[test]
+    fn test_bug1_screenshot_cancel_then_status_key() {
+        let mut state = make_state();
+
+        // User presses 'a' to add screenshot
+        start_screenshot(&mut state);
+        assert_eq!(state.focused_pane, FocusedPane::Notes);
+        assert!(state.adding_screenshot);
+
+        // User presses Esc to cancel
+        cancel_screenshot(&mut state);
+        assert!(!state.adding_screenshot);
+        assert_eq!(
+            state.focused_pane,
+            FocusedPane::Tests,
+            "BUG 1: Focus must return to Tests after screenshot Esc"
+        );
+
+        // Status key should work
+        set_status(&mut state, Status::Failed);
+        assert_eq!(state.results.results[0].status, Status::Failed);
+    }
+
+    #[test]
+    fn test_bug1_screenshot_confirm_then_status_key() {
+        let mut state = make_state();
+
+        // User presses 'a' to add screenshot
+        start_screenshot(&mut state);
+        state.screenshot_input = "/tmp/screenshot.png".to_string();
+
+        // User presses Enter to confirm
+        confirm_screenshot(&mut state);
+        assert!(!state.adding_screenshot);
+        assert_eq!(
+            state.focused_pane,
+            FocusedPane::Tests,
+            "BUG 1: Focus must return to Tests after screenshot Enter"
+        );
+
+        // Status key should work
+        set_status(&mut state, Status::Inconclusive);
+        assert_eq!(state.results.results[0].status, Status::Inconclusive);
+
+        // Screenshot was actually saved
+        assert_eq!(state.results.results[0].screenshots.len(), 1);
+    }
+}

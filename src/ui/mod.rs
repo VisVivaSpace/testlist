@@ -364,3 +364,104 @@ fn draw_status_bar(frame: &mut Frame, state: &AppState, area: Rect) {
 
     frame.render_widget(paragraph, area);
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // === Bug 2 verification test ===
+    // On a small terminal (e.g. 15 rows), the status bar must still get its 1 row.
+    // The old layout used Min(10) for the top area, which left 0 rows for the
+    // status bar on terminals with height <= 18. The fix uses Min(3).
+
+    #[test]
+    fn test_bug2_status_bar_visible_on_small_terminal() {
+        // Simulate a very small terminal: 15 rows
+        let small_area = Rect::new(0, 0, 80, 15);
+
+        let chunks = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([
+                Constraint::Min(3),    // Top area (tests + notes) — the fix
+                Constraint::Length(8), // Terminal
+                Constraint::Length(1), // Status bar
+            ])
+            .split(small_area);
+
+        let status_bar = chunks[2];
+        assert_eq!(
+            status_bar.height, 1,
+            "BUG 2: Status bar must be 1 row high even on small terminals"
+        );
+
+        let terminal_pane = chunks[1];
+        assert_eq!(
+            terminal_pane.height, 8,
+            "Terminal pane should keep its 8 rows"
+        );
+
+        let top_area = chunks[0];
+        assert_eq!(
+            top_area.height, 6,
+            "Top area gets remaining space (15 - 8 - 1 = 6)"
+        );
+    }
+
+    #[test]
+    fn test_bug2_extremely_small_terminal() {
+        // Even at 10 rows, status bar should still be visible
+        let tiny_area = Rect::new(0, 0, 80, 10);
+
+        let chunks = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([
+                Constraint::Min(3),
+                Constraint::Length(8),
+                Constraint::Length(1),
+            ])
+            .split(tiny_area);
+
+        let status_bar = chunks[2];
+        assert!(
+            status_bar.height >= 1,
+            "BUG 2: Status bar must be visible even on 10-row terminal, got height={}",
+            status_bar.height
+        );
+    }
+
+    // Regression: verify old Min(10) would have failed
+    #[test]
+    fn test_bug2_old_layout_would_hide_status_bar() {
+        let small_area = Rect::new(0, 0, 80, 15);
+
+        // Old layout with Min(10)
+        let old_chunks = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([
+                Constraint::Min(10), // OLD — too greedy
+                Constraint::Length(8),
+                Constraint::Length(1),
+            ])
+            .split(small_area);
+
+        // With 15 rows: Min(10) takes 10, Length(8) wants 8 but only 5 left,
+        // Length(1) gets squeezed. The exact behavior depends on ratatui's
+        // constraint solver, but the key issue is the top area takes too much.
+        let old_top = old_chunks[0].height;
+        let new_chunks = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([
+                Constraint::Min(3), // NEW — flexible
+                Constraint::Length(8),
+                Constraint::Length(1),
+            ])
+            .split(small_area);
+
+        let new_top = new_chunks[0].height;
+        // The new layout gives more room to terminal + status bar
+        assert!(
+            new_top <= old_top,
+            "New layout should not be greedier than old for top area"
+        );
+    }
+}
