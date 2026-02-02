@@ -77,8 +77,8 @@ Testlist(
             setup: [],
             action: "Run the release build",
             verify: [
-                "Build completes without errors",
-                "Binary is created in target/release/",
+                ChecklistItem(id: "v0", text: "Build completes without errors"),
+                ChecklistItem(id: "v1", text: "Binary is created in target/release/"),
             ],
             suggested_command: Some("cargo build --release"),
         ),
@@ -94,16 +94,16 @@ Pay attention to:
 - Keyboard navigation
             "#,
             setup: [
-                "Start the dev server",
-                "Open browser to http://localhost:3000",
-                "Ensure test user exists (user: demo, pass: demo)",
+                ChecklistItem(id: "s0", text: "Start the dev server"),
+                ChecklistItem(id: "s1", text: "Open browser to http://localhost:3000"),
+                ChecklistItem(id: "s2", text: "Ensure test user exists (user: demo, pass: demo)"),
             ],
             action: "Attempt to log in with the test credentials",
             verify: [
-                "Login button shows loading state",
-                "Redirected to /dashboard on success",
-                "Welcome message displays username",
-                "Session persists on page refresh",
+                ChecklistItem(id: "v0", text: "Login button shows loading state"),
+                ChecklistItem(id: "v1", text: "Redirected to /dashboard on success"),
+                ChecklistItem(id: "v2", text: "Welcome message displays username"),
+                ChecklistItem(id: "v3", text: "Session persists on page refresh"),
             ],
             suggested_command: Some("cargo run --bin server"),
         ),
@@ -121,15 +121,17 @@ Consider:
             setup: [],
             action: "Explore the application",
             verify: [
-                "Navigation is intuitive",
-                "No confusing dead-ends",
-                "Performance feels acceptable",
+                ChecklistItem(id: "v0", text: "Navigation is intuitive"),
+                ChecklistItem(id: "v1", text: "No confusing dead-ends"),
+                ChecklistItem(id: "v2", text: "Performance feels acceptable"),
             ],
             suggested_command: None,
         ),
     ],
 )
 ```
+
+> **Note:** Plain strings in `setup` and `verify` arrays are also accepted for backward compatibility.
 
 ### Results File
 
@@ -193,17 +195,17 @@ Results(
 │                                          │ Screenshots:                    │
 │ ▼ [✗] Login flow                         │   [1] login-slow.png            │
 │   ┌ Setup ────────────────────────────┐  │   [2] error-message.png         │
-│   │ [✓] Start dev server              │  │   [+] Add screenshot...         │
-│   │ [✓] Open browser                  │  │                                 │
-│   │ [✓] Test user exists              │  │                                 │
+│   │ • Start dev server                │  │   [+] Add screenshot...         │
+│   │ • Open browser                    │  │                                 │
+│   │ • Test user exists                │  │                                 │
 │   └───────────────────────────────────┘  │                                 │
 │   Action: Attempt to log in with the     │                                 │
 │           test credentials               │                                 │
 │   ┌ Verify ───────────────────────────┐  │                                 │
-│   │ [✓] Loading state shown           │  │                                 │
-│   │ [✓] Redirected                    │  │                                 │
-│   │ [✓] Welcome message               │  │                                 │
-│   │ [ ] Session persists              │  │                                 │
+│   │ • Loading state shown             │  │                                 │
+│   │ • Redirected                      │  │                                 │
+│   │ • Welcome message                 │  │                                 │
+│   │ • Session persists                │  │                                 │
 │   └───────────────────────────────────┘  │                                 │
 ├─ Terminal ───────────────────────────────┴─────────────────────────────────┤
 │ $ cargo run --bin server                                                   │
@@ -213,7 +215,7 @@ Results(
 │ Server running on http://localhost:3000                                    │
 │ $ _                                                                        │
 ├────────────────────────────────────────────────────────────────────────────┤
-│ [P]ass [F]ail [I]nconclusive [S]kip │ [Tab] Pane │ [↑↓] History │ [Q]uit  │
+│ [P]ass [F]ail [I]nc [S]kip │ [Tab] Pane │ [?] Help │ [w] Save │ [Q]uit │
 └────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -230,35 +232,25 @@ Results(
 
 | Key | Context | Action |
 |-----|---------|--------|
-| `↑/↓` or `j/k` | Tests pane | Navigate test list |
-| `↑/↓` | Terminal pane | Cycle through command history |
-| `Tab` | Terminal pane | Auto-complete suggested commands for current test |
-| `Enter` or `l` | Tests pane | Expand/collapse test item |
-| `Space` | Tests pane | Toggle sub-checklist item |
+| `↑/↓` or `j/k` | Tests pane | Navigate test list (headers only) |
+| `Enter`, `l`, or `Space` | Tests pane | Expand/collapse test item |
 | `Tab` | Global | Cycle focus between panes |
 | `p` | Tests pane | Mark current test Passed |
 | `f` | Tests pane | Mark current test Failed |
 | `i` | Tests pane | Mark current test Inconclusive |
 | `s` | Tests pane | Mark current test Skipped |
-| `n` | Global | Focus notes pane for editing |
-| `a` | Notes pane | Add screenshot (prompts for path) |
-| `Esc` | Notes pane | Exit editing mode |
-| `q` | Global | Quit (with confirmation if incomplete) |
-| `Ctrl+s` | Global | Save results |
+| `n` | Tests pane | Edit notes for current test |
+| `a` | Tests pane | Add screenshot (prompts for path) |
+| `c` | Tests pane | Insert suggested command into terminal |
+| `Esc` | Notes/Terminal | Exit editing mode / return to Tests |
+| `w` | Global | Save results |
+| `t` | Global | Toggle theme (dark/light) |
+| `?` | Global | Show help popup |
+| `q` | Global | Quit (selectable Yes/No dialog if unsaved) |
 
-### Terminal Tab Completion
+### Suggested Commands
 
-When focused in the terminal pane, pressing `Tab` on an empty or partial line offers completion from:
-
-1. **Suggested command** for the currently selected test (highest priority)
-2. **All suggested commands** from the testlist
-3. Standard shell completion (if PTY supports it)
-
-Example:
-```
-$ car<Tab>
-→ $ cargo run --bin server    (suggested for "Login flow" test)
-```
+Each test can have an optional `suggested_command`. Pressing `c` in the Tests pane inserts it into the embedded terminal and switches focus to the terminal pane.
 
 ---
 
@@ -351,7 +343,9 @@ EXAMPLES:
 
 - [ ] Markdown syntax highlighting in descriptions
 - [x] Progress indicator (3/10 complete)
-- [x] Quit confirmation with unsaved changes
+- [x] Quit confirmation with unsaved changes (selectable Yes/No dialog)
+- [x] Manual save (`w` key)
+- [x] Help popup (`?` key)
 - [ ] Auto-save on test completion
 - [x] Configurable colors/theme
 - [x] Resize handling

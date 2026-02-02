@@ -15,24 +15,24 @@ While automated tests verify *what code does*, testlist captures *what humans ob
 │                                          │ Screenshots:                    │
 │ ▼ [✗] Login flow                         │   [1] login-slow.png            │
 │   ┌ Setup ────────────────────────────┐  │   [2] error-message.png         │
-│   │ [✓] Start dev server              │  │                                 │
-│   │ [✓] Open browser                  │  │                                 │
-│   │ [✓] Test user exists              │  │                                 │
+│   │ • Start dev server                │  │                                 │
+│   │ • Open browser                    │  │                                 │
+│   │ • Test user exists                │  │                                 │
 │   └───────────────────────────────────┘  │                                 │
 │   Action: Attempt to log in with the     │                                 │
 │           test credentials               │                                 │
 │   ┌ Verify ───────────────────────────┐  │                                 │
-│   │ [✓] Loading state shown           │  │                                 │
-│   │ [✓] Redirected                    │  │                                 │
-│   │ [✓] Welcome message               │  │                                 │
-│   │ [ ] Session persists              │  │                                 │
+│   │ • Loading state shown             │  │                                 │
+│   │ • Redirected                      │  │                                 │
+│   │ • Welcome message                 │  │                                 │
+│   │ • Session persists                │  │                                 │
 │   └───────────────────────────────────┘  │                                 │
 ├─ Terminal ───────────────────────────────┴─────────────────────────────────┤
 │ $ cargo run --bin server                                                   │
 │ Server running on http://localhost:3000                                    │
 │ $ _                                                                        │
 ├────────────────────────────────────────────────────────────────────────────┤
-│ [P]ass [F]ail [I]nconclusive [S]kip │ [Tab] Pane │ [↑↓] Nav │ [Q]uit     │
+│ [P]ass [F]ail [I]nc [S]kip │ [Tab] Pane │ [?] Help │ [w] Save │ [Q]uit │
 └────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -109,14 +109,16 @@ Testlist(
             setup: [],
             action: "Run the release build",
             verify: [
-                "Build completes without errors",
-                "Binary is created in target/release/",
+                ChecklistItem(id: "v0", text: "Build completes without errors"),
+                ChecklistItem(id: "v1", text: "Binary is created in target/release/"),
             ],
             suggested_command: Some("cargo build --release"),
         ),
     ],
 )
 ```
+
+> **Note:** Plain strings in `setup` and `verify` arrays are also accepted for backward compatibility.
 
 ### Results file (`*.testlist.results.ron`)
 
@@ -150,9 +152,8 @@ Results(
 
 | Key | Action |
 |-----|--------|
-| `j/k` or `↑/↓` | Navigate test list |
-| `Enter` or `l` | Expand/collapse test details |
-| `Space` | Toggle checklist items |
+| `j/k` or `↑/↓` | Navigate test list (headers only) |
+| `Enter`, `l`, or `Space` | Expand/collapse test details |
 | `Tab` | Cycle pane focus (Tests → Notes → Terminal) |
 
 ### Status Marking
@@ -177,8 +178,10 @@ Results(
 
 | Key | Action |
 |-----|--------|
+| `w` | Save results |
 | `t` | Toggle theme (dark/light) |
-| `q` | Quit (prompts if unsaved changes) |
+| `?` | Show help popup |
+| `q` | Quit (selectable Yes/No dialog if unsaved changes) |
 
 ## Workflows
 
