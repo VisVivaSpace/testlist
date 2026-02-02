@@ -618,6 +618,7 @@ fn handle_notes_editing(state: &mut AppState, key: KeyCode) {
                 state.dirty = true;
             }
             state.editing_notes = false;
+            state.focused_pane = FocusedPane::Tests;
         }
         KeyCode::Enter => {
             state.notes_input.push('\n');
@@ -639,6 +640,7 @@ fn handle_screenshot_input(state: &mut AppState, key: KeyCode) {
             // Cancel
             state.adding_screenshot = false;
             state.screenshot_input.clear();
+            state.focused_pane = FocusedPane::Tests;
         }
         KeyCode::Enter => {
             // Add the screenshot path
@@ -651,6 +653,7 @@ fn handle_screenshot_input(state: &mut AppState, key: KeyCode) {
             }
             state.adding_screenshot = false;
             state.screenshot_input.clear();
+            state.focused_pane = FocusedPane::Tests;
         }
         KeyCode::Backspace => {
             state.screenshot_input.pop();
@@ -817,7 +820,7 @@ fn draw(frame: &mut Frame, state: &AppState) -> LayoutAreas {
     let main_chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Min(10),    // Top area
+            Constraint::Min(3),     // Top area (flexible to allow status bar on small terminals)
             Constraint::Length(8),  // Terminal placeholder
             Constraint::Length(1),  // Status bar
         ])
