@@ -209,4 +209,4 @@ Results(
 
 ## License
 
-MIT — Copyright (c) 2026 Vis Viva Space. See [LICENSE.txt](LICENSE.txt).
+MIT — Copyright (c) 2026 Nathan Strange. See [LICENSE](LICENSE).
